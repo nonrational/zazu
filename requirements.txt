@@ -1,2 +1,2 @@
-tello==1.2
-tello_python==1.1.6
+djitellopy==2.4.0
+opencv_python==4.5.4.58
