@@ -80,6 +80,36 @@ uv run pytest
 The detection, target-selection, control, safety, and state-machine logic are
 unit-tested with no hardware. The flight wrapper is tested with a mocked Tello.
 
+## Tuning
+
+The defaults are starting guesses — expect to adjust them once you watch it fly.
+Most knobs live where the runner constructs its configs in `py/tello_watch/run.py`:
+
+```python
+sm = StateMachine(
+    StateConfig(reacquire_after_s=2.5, scan_yaw=20),
+    ControlConfig(kp=0.3, deadzone=0.1, max_yaw=25),
+)
+```
+
+| Knob | Where | Default | Effect |
+|---|---|---|---|
+| `kp` | `run.py` `ControlConfig` | `0.3` | Yaw aggressiveness. Higher = snaps to center faster but can overshoot/oscillate; lower = smoother but lags a moving toddler. |
+| `deadzone` | `run.py` `ControlConfig` | `0.1` | Fraction of half-frame around center where it holds still (no yaw). Bigger = steadier, ignores small drift; smaller = twitchier. |
+| `max_yaw` | `run.py` `ControlConfig` | `25` | Hard cap on yaw rate (−100..100). Keep modest so it never whips around near the child. |
+| `scan_yaw` | `run.py` `StateConfig` | `20` | Yaw rate while scanning/reacquiring. Lower = slower, more thorough sweep; too high blurs the feed and misses people. |
+| `reacquire_after_s` | `run.py` `StateConfig` | `2.5` | Seconds a target can be lost before it stops grace-hovering and resumes scanning. |
+| `--battery-floor` | CLI flag | `20` | Auto-land battery threshold (%). |
+| `conf_threshold` | `PersonDetector(...)` in `run.py:54` | `0.5` | Detection confidence. Raise (e.g. `0.6`) to cut false positives; lower to catch a partially-visible toddler. Pass it: `PersonDetector(PROTOTXT, CAFFEMODEL, conf_threshold=0.6)`. |
+| `NUDGE` | `run.py` | `30` | Manual-override step in cm. |
+
+### Yaw-sign gotcha
+
+If on the first flight it rotates **away** from your toddler instead of toward
+him, the yaw sign is backwards for your setup — **flip the sign of `kp`** (e.g.
+`kp=-0.3`). Positive yaw is meant to turn the drone toward a target right of
+center; it's easy to have this inverted until you see it move.
+
 ## How it works
 
 The `tello_watch` package is split into single-purpose modules:
