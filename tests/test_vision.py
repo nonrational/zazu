@@ -27,3 +27,22 @@ def test_parse_detections_keeps_person_above_threshold():
 def test_parse_detections_empty_returns_empty_list():
     raw = np.zeros((1, 1, 0, 7), dtype=np.float32)
     assert parse_detections(raw, frame_w=200, frame_h=100) == []
+
+
+def test_frame_is_live_none():
+    from tello_watch.vision import frame_is_live
+    assert frame_is_live(None) is False
+
+
+def test_frame_is_live_all_black():
+    import numpy as np
+    from tello_watch.vision import frame_is_live
+    assert frame_is_live(np.zeros((4, 4, 3), dtype=np.uint8)) is False
+
+
+def test_frame_is_live_real_frame():
+    import numpy as np
+    from tello_watch.vision import frame_is_live
+    f = np.zeros((4, 4, 3), dtype=np.uint8)
+    f[0, 0, 0] = 1
+    assert frame_is_live(f) is True

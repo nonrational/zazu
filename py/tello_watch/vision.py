@@ -39,6 +39,16 @@ def parse_detections(raw: np.ndarray, frame_w: int, frame_h: int, conf_threshold
     return boxes
 
 
+def frame_is_live(frame) -> bool:
+    """A live Tello feed is never all-black; djitellopy returns an all-zero
+    frame before the stream warms up and exposes no None sentinel, so treat
+    None or all-zero as 'no video'. Note: does not detect a frozen non-black
+    feed — the operator must keep ESC ready as the real-time kill."""
+    if frame is None:
+        return False
+    return bool(frame.any())
+
+
 class PersonDetector:
     def __init__(self, prototxt, model, conf_threshold=0.5):
         self.net = cv2.dnn.readNetFromCaffe(prototxt, model)

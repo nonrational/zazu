@@ -10,15 +10,18 @@ from .flight import Flight
 from .safety import SafetyAction, assess
 from .statemachine import StateConfig, StateMachine
 from .target import select_target
-from .vision import PersonDetector
+from .vision import PersonDetector, frame_is_live
 
 MODELS = os.path.join(os.path.dirname(__file__), "models")
 PROTOTXT = os.path.join(MODELS, "MobileNetSSD_deploy.prototxt")
 CAFFEMODEL = os.path.join(MODELS, "MobileNetSSD_deploy.caffemodel")
 
 NUDGE = 30  # cm, manual override step
+MANUAL_KEYS = {ord(c) for c in "wasdqerf"}
 
 
+# move_* calls block the loop until the Tello acknowledges — intended for a
+# deliberate manual takeover.
 def _manual_override(flight, key):
     if not flight.fly:
         return
@@ -60,37 +63,60 @@ def main():
     flight.takeoff()
 
     try:
-        while True:
-            frame = flight.get_frame()
-            video_ok = frame is not None
-            target = select_target(detector.detect(frame)) if video_ok else None
-            state, cmd = sm.update(target, frame.shape[1], frame.shape[0], time.time()) if video_ok else (None, None)
+        try:
+            while True:
+                frame = flight.get_frame()
+                video_ok = frame_is_live(frame)
+                target = select_target(detector.detect(frame)) if video_ok else None
+                state, cmd = sm.update(target, frame.shape[1], frame.shape[0], time.time()) if video_ok else (None, None)
 
-            key = cv2.waitKey(1) & 0xFF
-            kill = key == 27  # ESC
+                key = cv2.waitKey(1) & 0xFF
+                kill = key == 27  # ESC
 
-            action = assess(
-                battery=flight.battery(),
-                connected=True,
-                video_ok=video_ok,
-                kill_requested=kill,
-                battery_floor=args.battery_floor,
-            )
-            if action == SafetyAction.LAND:
-                print("LAND triggered:", "kill" if kill else "safety")
-                break
+                # djitellopy's get_battery reads the cached background state stream,
+                # not a blocking query, so polling each loop is cheap; an exception
+                # here means the link/state is unavailable.
+                try:
+                    battery = flight.battery()
+                    connected = True
+                except Exception:
+                    battery, connected = 0, False
 
-            _manual_override(flight, key)
-            if cmd is not None:
-                flight.send(cmd)
+                action = assess(
+                    battery=battery,
+                    connected=connected,
+                    video_ok=video_ok,
+                    kill_requested=kill,
+                    battery_floor=args.battery_floor,
+                )
+                if action == SafetyAction.LAND:
+                    if kill:
+                        reason = "kill (ESC)"
+                    elif not connected:
+                        reason = "connection loss"
+                    elif not video_ok:
+                        reason = "video loss"
+                    else:
+                        reason = "low battery"
+                    print("LAND triggered:", reason)
+                    break
 
-            if video_ok:
-                if target is not None:
-                    cv2.rectangle(frame, (target.x, target.y),
-                                  (target.x + target.w, target.y + target.h), (0, 255, 0), 2)
-                cv2.putText(frame, str(state), (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.imshow("tello-watch", frame)
+                if key in MANUAL_KEYS:
+                    _manual_override(flight, key)
+                elif cmd is not None:
+                    flight.send(cmd)
+
+                if video_ok:
+                    if target is not None:
+                        cv2.rectangle(frame, (target.x, target.y),
+                                      (target.x + target.w, target.y + target.h), (0, 255, 0), 2)
+                    cv2.putText(frame, str(state), (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.imshow("tello-watch", frame)
+        except KeyboardInterrupt:
+            print("LAND triggered: Ctrl-C")
+        except Exception as e:
+            print("LAND triggered: unhandled error:", e)
     finally:
         flight.land()
         cv2.destroyAllWindows()
