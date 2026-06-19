@@ -110,6 +110,25 @@ him, the yaw sign is backwards for your setup — **flip the sign of `kp`** (e.g
 `kp=-0.3`). Positive yaw is meant to turn the drone toward a target right of
 center; it's easy to have this inverted until you see it move.
 
+## Logging & analysis
+
+Record a flight (works with or without `--no-fly`) and get a tuning summary.
+
+```bash
+# numeric-only log written to flights/<timestamp>/
+uv run tello-watch --log flights --note "crawling, afternoon sun"
+
+# summarize a run
+uv run tello-watch-analyze flights/2026-06-19T15-30-00
+```
+
+Each run directory holds `meta.json` (the exact config that flew) and
+`events.jsonl` (one numeric record per frame — no imagery). The summary reports
+effective FPS, time-to-first-lock, RMS centering error, battery curve, and a
+best-effort yaw-sign check. Start on the ground with `--no-fly --log flights` to
+tune detection safely before arming the motors. The logs contain only numbers, so
+they're safe to share for analysis; keep identifying detail out of `--note`.
+
 ## How it works
 
 The `tello_watch` package is split into single-purpose modules:
