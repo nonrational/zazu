@@ -106,7 +106,7 @@ Existing-code seams:
 - `meta.json` (written once at start):
   ```json
   {"started_at":"2026-06-19T15:30:00Z","fly":true,"note":"crawling, afternoon sun",
-   "frame_size":[720,960],"sdk_version":"<best-effort>","firmware":"<best-effort>",
+   "frame_size":[720,960],"sdk_version":"<best-effort>","serial_number":"<best-effort>",
    "config":{"kp":0.3,"deadzone":0.1,"max_yaw":25,"scan_yaw":20,
              "reacquire_after_s":2.5,"battery_floor":20,"conf_threshold":0.5}}
   ```
@@ -124,7 +124,7 @@ Existing-code seams:
 runner reads one frame after `start_video()` (before the main loop), takes its
 `shape` as `[height, width]`, and includes it in the `meta` dict passed to the
 `FlightLogger` constructor — so `meta.json` is complete when first written.
-`sdk_version`/`firmware` are best-effort and may be `null` if the SDK does not
+`sdk_version`/`serial_number` are best-effort and may be `null` if the SDK does not
 expose them.
 
 ## Error handling

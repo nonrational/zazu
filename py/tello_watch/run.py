@@ -26,6 +26,20 @@ SCAN_YAW, REACQUIRE_AFTER_S = 20, 2.5
 CONF_THRESHOLD = 0.5
 
 
+def _drone_info(flight):
+    """Query best-effort SDK version and serial number from the Tello."""
+    info = {"sdk_version": None, "serial_number": None}
+    try:
+        info["sdk_version"] = flight.tello.query_sdk_version()
+    except Exception:
+        pass
+    try:
+        info["serial_number"] = flight.tello.query_serial_number()
+    except Exception:
+        pass
+    return info
+
+
 # move_* calls block the loop until the Tello acknowledges — intended for a
 # deliberate manual takeover.
 def _manual_override(flight, key):
@@ -73,10 +87,13 @@ def main():
     if args.log:
         first = flight.get_frame()
         frame_size = [first.shape[0], first.shape[1]] if first is not None else [None, None]
+        info = _drone_info(flight)
         meta = {
             "fly": not args.no_fly,
             "note": args.note,
             "frame_size": frame_size,
+            "sdk_version": info["sdk_version"],
+            "serial_number": info["serial_number"],
             "config": {
                 "kp": KP, "deadzone": DEADZONE, "max_yaw": MAX_YAW,
                 "scan_yaw": SCAN_YAW, "reacquire_after_s": REACQUIRE_AFTER_S,
