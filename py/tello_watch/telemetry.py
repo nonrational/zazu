@@ -1,3 +1,46 @@
+import json
+import os
+from datetime import datetime
+
+FLUSH_EVERY = 30
+
+
+class FlightLogger:
+    def __init__(self, base_dir, meta, now=None):
+        now = now or datetime.now
+        stamp = now().strftime("%Y-%m-%dT%H-%M-%S")
+        self.run_dir = os.path.join(base_dir, stamp)
+        os.makedirs(self.run_dir, exist_ok=True)
+        self.errors = 0
+        self._count = 0
+        self._closed = False
+        meta = dict(meta)
+        meta["started_at"] = now().isoformat()
+        with open(os.path.join(self.run_dir, "meta.json"), "w") as f:
+            json.dump(meta, f, indent=2)
+        self._fh = open(os.path.join(self.run_dir, "events.jsonl"), "a")
+
+    def log_frame(self, **fields):
+        try:
+            rec = build_record(**fields)
+            self._fh.write(json.dumps(rec) + "\n")
+            self._count += 1
+            if self._count % FLUSH_EVERY == 0:
+                self._fh.flush()
+        except Exception:
+            self.errors += 1
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            self._fh.flush()
+            self._fh.close()
+        except Exception:
+            self.errors += 1
+
+
 def build_record(*, t, frame_idx, loop_dt_ms, detect_ms, state, detections,
                  target, offset_norm, cmd, battery, video_ok, connected, kill,
                  action, land_reason, drone):
