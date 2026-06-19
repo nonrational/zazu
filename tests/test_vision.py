@@ -22,3 +22,8 @@ def test_parse_detections_keeps_person_above_threshold():
     b = boxes[0]
     assert (b.x, b.y, b.w, b.h) == (50, 50, 100, 50)
     assert abs(b.conf - 0.9) < 1e-6
+
+
+def test_parse_detections_empty_returns_empty_list():
+    raw = np.zeros((1, 1, 0, 7), dtype=np.float32)
+    assert parse_detections(raw, frame_w=200, frame_h=100) == []

@@ -23,7 +23,7 @@ class Box:
         return self.y + self.h / 2
 
 
-def parse_detections(raw, frame_w, frame_h, conf_threshold=0.5):
+def parse_detections(raw: np.ndarray, frame_w: int, frame_h: int, conf_threshold: float = 0.5) -> list[Box]:
     boxes = []
     detections = raw[0, 0]  # shape (N, 7)
     for det in detections:
@@ -44,7 +44,7 @@ class PersonDetector:
         self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
         self.conf_threshold = conf_threshold
 
-    def detect(self, frame):
+    def detect(self, frame: np.ndarray) -> list[Box]:
         h, w = frame.shape[:2]
         blob = cv2.dnn.blobFromImage(
             cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5
