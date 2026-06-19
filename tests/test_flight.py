@@ -28,3 +28,19 @@ def test_battery_reads_through(MockTello):
     f = Flight(fly=False)
     f.tello.get_battery.return_value = 73
     assert f.battery() == 73
+
+
+@patch("tello_watch.flight.Tello")
+def test_state_returns_current_state(MockTello):
+    from tello_watch.flight import Flight
+    f = Flight(fly=False)
+    f.tello.get_current_state.return_value = {"yaw": 10, "tof": 100}
+    assert f.state() == {"yaw": 10, "tof": 100}
+
+
+@patch("tello_watch.flight.Tello")
+def test_state_returns_empty_dict_on_error(MockTello):
+    from tello_watch.flight import Flight
+    f = Flight(fly=False)
+    f.tello.get_current_state.side_effect = RuntimeError("boom")
+    assert f.state() == {}

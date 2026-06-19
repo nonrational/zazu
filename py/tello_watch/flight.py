@@ -12,6 +12,12 @@ class Flight:
     def battery(self):
         return self.tello.get_battery()
 
+    def state(self):
+        try:
+            return self.tello.get_current_state()
+        except Exception:
+            return {}
+
     def start_video(self):
         self.tello.streamoff()
         self.tello.streamon()

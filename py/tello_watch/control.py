@@ -16,12 +16,16 @@ class ControlConfig:
     max_yaw: int
 
 
-def compute_command(target, frame_w, frame_h, cfg):
+def horizontal_offset_norm(target, frame_w):
     if target is None:
-        return Command()
+        return None
     center = frame_w / 2
-    offset_norm = (target.cx - center) / center
-    if abs(offset_norm) < cfg.deadzone:
+    return (target.cx - center) / center
+
+
+def compute_command(target, frame_w, frame_h, cfg):
+    offset_norm = horizontal_offset_norm(target, frame_w)
+    if offset_norm is None or abs(offset_norm) < cfg.deadzone:
         return Command()
     yaw = cfg.kp * offset_norm * 100
     yaw = max(-cfg.max_yaw, min(cfg.max_yaw, yaw))
